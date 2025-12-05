@@ -15,10 +15,15 @@ Each lab has its own folder and includes:
 
 Labs are grouped by category and difficulty:
 portswigger/
+
 └── authentication/
+
 ├── apprentice/
+
 ├── practitioner/
+
 └── expert/
+
 
 ## 🎯 Purpose
 
