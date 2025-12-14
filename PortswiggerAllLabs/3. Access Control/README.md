@@ -1,249 +1,134 @@
-🔐 Access Control & Privilege Escalation
-Ayrıntılı Türkçe Pentest Checklist
-1️⃣ Authentication & Session Temeli
+# 🔐 Access Control & Privilege Escalation Checklist
 
-Yetkilendirme testine geçmeden önce mutlaka kontrol et
+Bu doküman, web uygulamalarında **Access Control zafiyetlerini** ve **Privilege Escalation** senaryolarını tespit etmek için hazırlanmış **tek sayfalık, pratik bir pentest checklist**tir.  
+PortSwigger lab’leri, bug bounty hedefleri ve gerçek pentest senaryoları için uygundur.
 
- Login olmadan erişilebilen hassas endpoint var mı?
+---
 
- Session cookie login sonrası değişiyor mu?
+## 1️⃣ Authentication & Session
+- [ ] Login olmadan hassas endpoint erişimi var mı?
+- [ ] Login sonrası session cookie yenileniyor mu?
+- [ ] Session kullanıcı + role bağlı mı?
+- [ ] Logout sonrası eski cookie çalışıyor mu?
+- [ ] Aynı session cookie farklı kullanıcıda geçerli mi?
 
- Cookie sadece kullanıcıya mı bağlı, yoksa role de bağlı mı?
+---
 
- Logout sonrası eski cookie ile istek atılabiliyor mu?
+## 2️⃣ Vertical Access Control (Dikey)
+- [ ] Admin URL’ler (`/admin`, `/administrator`, `/manage`, `/dashboard`)
+- [ ] UI’da gizli ama URL ile erişilebilir mi?
+- [ ] “Yetkiniz yok” yerine işlem gerçekleşiyor mu?
+- [ ] `robots.txt`, JS, HTML source admin URL sızdırıyor mu?
 
- Aynı session cookie farklı kullanıcıda çalışıyor mu?
-
-🎯 Amaç: Access control hatası mı, session bug’ı mı ayırt etmek
-
-2️⃣ Vertical Access Control (Dikey Yetki Kontrolü)
-
-Normal kullanıcı admin işlemi yapabiliyor mu?
-
-🔍 URL Bazlı Kontroller
-
- /admin, /administrator, /manage, /panel, /dashboard
-
- /admin/deleteUser
-
- /admin/users
-
- /admin/config
-
-Test:
-
-Direkt tarayıcıdan gir
-
-Burp Repeater’dan isteği gönder
-
-Farklı kullanıcı cookie’siyle dene
-
-🔍 UI Gizli ama Backend Açık mı?
-
- Admin linki UI’da yok ama URL çalışıyor mu?
-
- “Yetkiniz yok” mesajı geliyor mu yoksa işlem gerçekleşiyor mu?
-
- Sadece link gizlenmiş mi, gerçek kontrol yok mu?
-
-🔍 Admin URL Leak Kontrolleri
-
- robots.txt
-
- JS dosyaları
-
- HTML source
-
- API response’ları
-
+```js
 if (isAdmin) {
   link = "/admin-panel-x92a";
 }
+⚠️ JavaScript gizleme, access control değildir.
 
+3️⃣ Security by Obscurity
 
-⚠️ JS herkese görünür → gerçek kontrol değildir
-
-3️⃣ Security by Obscurity (Gizleyerek Koruma)
-
- Admin URL rastgele ama kontrol yok mu?
-
- URL brute-force veya leak ile bulunabiliyor mu?
+ Admin URL rastgele ama gerçek kontrol yok mu?
 
  URL bilindiğinde herkes erişebiliyor mu?
 
-🎯 Kural: URL gizlemek ≠ access control
+ URL leak / brute-force ile bulunabiliyor mu?
 
 4️⃣ Parameter-Based Access Control
 
-Rol / yetki kullanıcı tarafından değiştirilebiliyor mu?
+ Query string (?admin=true, ?role=1, ?isAdmin=1)
 
-🔍 Query String
+ Cookie (role=user, admin=false)
 
- ?admin=true
+ Request body / form (role, isAdmin, userType)
 
- ?role=1
+ Parametre değişince yetki artıyor mu?
 
- ?isAdmin=1
+5️⃣ Platform / Framework Bypass
 
-🔍 Cookie
+ URL override header’ları (X-Original-URL, X-Rewrite-URL)
 
- role=user
+ POST engelli ama GET / PUT / DELETE çalışıyor mu?
 
- admin=false
-
- access=0
-
-🔍 Hidden Field / Form
-
- Profil update request’lerinde rol alanı var mı?
-
- JSON body içinde role, isAdmin, userType bulunuyor mu?
-
-📌 Test:
-
-Değeri değiştir
-
-Request’i tekrar gönder
-
-Yetki artıyor mu?
-
-5️⃣ Platform / Framework Kaynaklı Bypass’lar
-🔍 URL Override Header’ları
-
- X-Original-URL
-
- X-Rewrite-URL
-
- X-Forwarded-Path
+ Geçersiz metodlar (POSTX, TRACE) farklı davranıyor mu?
 
 POST /
 X-Original-URL: /admin/deleteUser
 
-
-🎯 Frontend kontrol var, backend override’a güveniyor olabilir
-
-🔍 HTTP Method Manipülasyonu
-
- POST engelli ama GET çalışıyor mu?
-
- PUT / DELETE deneniyor mu?
-
- OPTIONS bilgi sızdırıyor mu?
-
- Geçersiz metodlar (POSTX, TRACE) farklı davranıyor mu?
-
-📌 Burp Repeater → Change request method
-
 6️⃣ URL Matching & Routing Hataları
 
-Backend ve access control aynı endpoint’i mi görüyor?
+ Büyük/küçük harf farkı (/ADMIN/deleteUser)
 
- /ADMIN/deleteUser
+ Trailing slash (/admin/deleteUser/)
 
- /admin/DeleteUser
+ Suffix ekleme (.anything, ;)
 
- /admin/deleteUser/
+⚠️ Spring (< 5.3) suffix pattern zafiyetleri yaygındır.
 
- /admin/deleteUser.anything
+7️⃣ Horizontal Privilege Escalation (IDOR)
 
- /admin/deleteUser;
+ id, userId, accountId, orderId değiştirilebiliyor mu?
 
-⚠️ Spring (özellikle <5.3) suffix pattern açık olabilir
+ Başka kullanıcı verisi geliyor mu?
 
-7️⃣ Horizontal Privilege Escalation (Yatay Yetki Aşımı)
+/my-account?id=123 → /my-account?id=456
 
-Başka kullanıcının verisine erişim
+8️⃣ GUID / Unpredictable ID
 
-🔍 IDOR Kontrolleri
+ GUID’ler yorumlarda, mesajlarda, linklerde sızıyor mu?
 
- id=1 → id=2
+ API response’larında başka kullanıcı ID’si var mı?
 
- userId=
-
- accountId=
-
- orderId=
-
-/my-account?id=123
-
-
-📌 Değiştir → başka kullanıcı geliyor mu?
-
-8️⃣ GUID / Unpredictable ID Senaryoları
-
-Tahmin edilemez ama sızıyor mu?
-
- GUID’ler yorumlarda, mesajlarda, profil linklerinde var mı?
-
- API response’larında başka kullanıcı ID’si geliyor mu?
-
- Redirect response body’si temiz mi?
-
-⚠️ 302 dönse bile response BODY mutlaka kontrol et
+ Redirect (302) body’sinde veri sızıntısı var mı?
 
 9️⃣ Horizontal ➜ Vertical Escalation
 
-Yatay açık admin’e götürüyor mu?
-
- Başka kullanıcı admin mi?
+ Ele geçirilen kullanıcı admin mi?
 
  Admin hesabında:
 
-Parola reset
+ Parola reset
 
-API key
+ API key
 
-Rol değişikliği
+ Rol değişikliği
 
-Admin panel linki var mı?
+ Admin panel erişimi
 
-🎯 Yatay açık → admin compromise = tam yetki
+🔟 Multi-Step Process
 
-🔟 Multi-Step Process Zafiyetleri
+ Ara adımlar korunuyor mu?
 
-Adımların hepsi korunuyor mu?
-
- Step 1 korunuyor
-
- Step 2 korunuyor
-
- Step 3 direkt çağrılabiliyor mu?
-
-📌 Final request’i tek başına gönder
+ Final request direkt çağrılabiliyor mu?
 
 POST /confirm-action
 
 1️⃣1️⃣ Referer-Based Access Control
 
-Referer’a güvenilmiş mi?
+ Referer yokken işlem engelleniyor mu?
 
- Referer header yokken çalışmıyor mu?
-
- Fake Referer ekleyince çalışıyor mu?
+ Fake Referer ile bypass mümkün mü?
 
 Referer: https://site.com/admin
 
-
-⚠️ Referer tamamen attacker kontrolünde
-
 1️⃣2️⃣ Location-Based Access Control
 
- IP bazlı kısıt var mı?
+ IP / ülke bazlı kısıt var mı?
 
- VPN ile bypass oluyor mu?
+ VPN / proxy ile bypass edilebiliyor mu?
 
- Sadece client-side geo mu?
+ Kontrol client-side mı?
 
-🛡️ Güvenli Tasarım Kontrolü (Defensive Checklist)
+🛡️ Secure Design (Defensive Checklist)
 
  URL gizleme tek başına kullanılmamış
 
  Default deny uygulanmış
 
- Tüm endpoint’lerde server-side kontrol var
+ Tüm endpoint’lerde server-side access control var
 
- Merkezi access control mekanizması var
+ Merkezi yetkilendirme mekanizması mevcut
 
- Her endpoint için açık rol tanımı var
+ Her endpoint için açık rol tanımı yapılmış
 
- Düzenli access control testleri yapılıyor
+ Düzenli access control testleri uygulanıyor
