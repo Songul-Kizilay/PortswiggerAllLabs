@@ -1,134 +1,222 @@
-# 🔐 Access Control & Privilege Escalation Checklist
+🔐 Access Control & Privilege Escalation – Pentest Master Checklist (Tek Sayfa)
 
-Bu doküman, web uygulamalarında **Access Control zafiyetlerini** ve **Privilege Escalation** senaryolarını tespit etmek için hazırlanmış **tek sayfalık, pratik bir pentest checklist**tir.  
-PortSwigger lab’leri, bug bounty hedefleri ve gerçek pentest senaryoları için uygundur.
+Amaç:
+“Bu endpoint’te yetki var mı?” değil
+“Bu endpoint’te yetki gerçekten kontrol ediliyor mu?” sorusunu sordurmak.
 
----
+1️⃣ Authentication & Session Kontrolleri
 
-## 1️⃣ Authentication & Session
-- [ ] Login olmadan hassas endpoint erişimi var mı?
-- [ ] Login sonrası session cookie yenileniyor mu?
-- [ ] Session kullanıcı + role bağlı mı?
-- [ ] Logout sonrası eski cookie çalışıyor mu?
-- [ ] Aynı session cookie farklı kullanıcıda geçerli mi?
+🎯 Yetkilendirme testine girmeden önce session güvenilir mi?
 
----
+ Login olmadan /admin, /my-account, /api/* erişimi var mı?
 
-## 2️⃣ Vertical Access Control (Dikey)
-- [ ] Admin URL’ler (`/admin`, `/administrator`, `/manage`, `/dashboard`)
-- [ ] UI’da gizli ama URL ile erişilebilir mi?
-- [ ] “Yetkiniz yok” yerine işlem gerçekleşiyor mu?
-- [ ] `robots.txt`, JS, HTML source admin URL sızdırıyor mu?
+ Login → session cookie yenileniyor mu?
 
-```js
+ Session kullanıcı + role bağlı mı?
+
+ Logout sonrası eski cookie hâlâ çalışıyor mu?
+
+ Aynı cookie farklı kullanıcıda geçerli mi?
+
+Cookie: session=ABC123
+
+
+⚠️ Session sadece “login oldu mu?” diye bakıyorsa → Access control çöker
+
+2️⃣ Vertical Access Control (Dikey Yetki)
+
+🎯 Normal kullanıcı admin fonksiyonlarına ulaşabiliyor mu?
+
+ /admin, /administrator, /manage, /dashboard
+
+ UI’da gizli ama URL ile erişilebilir mi?
+
+ “403 Forbidden” yerine işlem gerçekleşiyor mu?
+
+ Silme / rol değiştirme gibi işlemler kontrolsüz mü?
+
+GET /admin/delete?username=carlos
+
+
+📌 PDF Örneği:
+Unprotected admin functionality lab’leri 
+
+Portswigger Access Control
+
+3️⃣ Security by Obscurity (Gizleyerek Güvenlik)
+
+🎯 “URL gizli” ama kontrol yok mu?
+
+ Admin link JS içinde mi?
+
+ isAdmin=false sadece UI mı gizliyor?
+
+ View-source ile admin URL çıkıyor mu?
+
 if (isAdmin) {
-  link = "/admin-panel-x92a";
+  link = "/admin-hfvc11";
 }
-⚠️ JavaScript gizleme, access control değildir.
 
-3️⃣ Security by Obscurity
 
- Admin URL rastgele ama gerçek kontrol yok mu?
-
- URL bilindiğinde herkes erişebiliyor mu?
-
- URL leak / brute-force ile bulunabiliyor mu?
+⚠️ JavaScript ≠ Access Control
 
 4️⃣ Parameter-Based Access Control
 
- Query string (?admin=true, ?role=1, ?isAdmin=1)
+🎯 Yetki parametreyle mi belirleniyor?
+
+ URL parametreleri (?admin=true, ?role=2)
 
  Cookie (role=user, admin=false)
 
- Request body / form (role, isAdmin, userType)
+ JSON body ("roleid":2)
 
- Parametre değişince yetki artıyor mu?
+ Hidden field / form value
 
-5️⃣ Platform / Framework Bypass
+{
+  "email": "test@test.com",
+  "roleid": 2
+}
 
- URL override header’ları (X-Original-URL, X-Rewrite-URL)
 
- POST engelli ama GET / PUT / DELETE çalışıyor mu?
+📌 PDF Lab:
+User role controlled by request parameter 
 
- Geçersiz metodlar (POSTX, TRACE) farklı davranıyor mu?
+Portswigger Access Control
 
-POST /
-X-Original-URL: /admin/deleteUser
+5️⃣ Horizontal Privilege Escalation (IDOR)
 
-6️⃣ URL Matching & Routing Hataları
+🎯 Başka kullanıcının verisine erişebiliyor musun?
 
- Büyük/küçük harf farkı (/ADMIN/deleteUser)
+ id, userId, accountId, orderId
 
- Trailing slash (/admin/deleteUser/)
+ Başka kullanıcıya ait data dönüyor mu?
 
- Suffix ekleme (.anything, ;)
+/my-account?id=wiener
+/my-account?id=carlos
 
-⚠️ Spring (< 5.3) suffix pattern zafiyetleri yaygındır.
 
-7️⃣ Horizontal Privilege Escalation (IDOR)
+📌 PDF Lab:
+User ID controlled by request parameter 
 
- id, userId, accountId, orderId değiştirilebiliyor mu?
+Portswigger Access Control
 
- Başka kullanıcı verisi geliyor mu?
+6️⃣ GUID / Unpredictable ID ≠ Güvenlik
 
-/my-account?id=123 → /my-account?id=456
+🎯 GUID kullanılmış ama kontrol var mı?
 
-8️⃣ GUID / Unpredictable ID
+ GUID’ler linklerde / yorumlarda sızıyor mu?
 
- GUID’ler yorumlarda, mesajlarda, linklerde sızıyor mu?
+ API response’ta başka kullanıcı ID’si var mı?
 
- API response’larında başka kullanıcı ID’si var mı?
+ Redirect (302) body’sinde veri sızıyor mu?
 
- Redirect (302) body’sinde veri sızıntısı var mı?
+/my-account?id=a80a3f91-49ca-48ff-88da-fde7f95a1821
 
-9️⃣ Horizontal ➜ Vertical Escalation
 
- Ele geçirilen kullanıcı admin mi?
+⚠️ GUID ≠ Authorization
 
- Admin hesabında:
+7️⃣ Horizontal ➜ Vertical Escalation
 
- Parola reset
+🎯 Ele geçirilen kullanıcı admin mi?
 
- API key
+ API key sızıyor mu?
 
- Rol değişikliği
+ Password reset endpoint’i var mı?
 
- Admin panel erişimi
+ Rol değişikliği yapılabiliyor mu?
+
+ Admin panel erişimi açılıyor mu?
+
+📌 PDF’de zincirleme örnekler var 
+
+Portswigger Access Control
+
+8️⃣ Method-Based Access Control
+
+🎯 Yetki sadece HTTP metoduna mı bağlı?
+
+ POST engelli ama GET çalışıyor mu?
+
+ PUT / DELETE denenmiş mi?
+
+ POSTX, TRACE gibi metodlar farklı mı davranıyor?
+
+POST  /admin-roles  → 401
+GET   /admin-roles  → 200
+
+
+📌 PDF Lab:
+Method-based access control can be circumvented 
+
+Portswigger Access Control
+
+9️⃣ URL Override & Routing Bypass
+
+🎯 Front-end filtre var ama backend?
+
+ X-Original-URL
+
+ X-Rewrite-URL
+
+ Case sensitivity (/ADMIN)
+
+ Trailing slash (/admin/)
+
+ Suffix (;, .json)
+
+POST /login
+X-Original-URL: /admin/delete?username=carlos
+
+
+📌 PDF Lab:
+URL-based access control can be circumvented 
+
+Portswigger Access Control
 
 🔟 Multi-Step Process
 
- Ara adımlar korunuyor mu?
+🎯 Sadece ilk adım mı korunuyor?
+
+ Ara adımlar yetkili mi?
 
  Final request direkt çağrılabiliyor mu?
 
 POST /confirm-action
 
+
+📌 PDF Lab:
+Multi-step process with no access control 
+
+Portswigger Access Control
+
 1️⃣1️⃣ Referer-Based Access Control
 
- Referer yokken işlem engelleniyor mu?
+🎯 Referer’a güveniliyor mu?
+
+ Referer yokken ne oluyor?
 
  Fake Referer ile bypass mümkün mü?
 
 Referer: https://site.com/admin
 
-1️⃣2️⃣ Location-Based Access Control
 
- IP / ülke bazlı kısıt var mı?
+📌 PDF Lab:
+Referer-based access control 
 
- VPN / proxy ile bypass edilebiliyor mu?
+Portswigger Access Control
 
- Kontrol client-side mı?
-
-🛡️ Secure Design (Defensive Checklist)
+🛡️ Secure Design – Savunma Checklist
 
  URL gizleme tek başına kullanılmamış
 
  Default deny uygulanmış
 
- Tüm endpoint’lerde server-side access control var
+ Her endpoint server-side kontrol yapıyor
 
- Merkezi yetkilendirme mekanizması mevcut
+ Rol kontrolü merkezi
 
- Her endpoint için açık rol tanımı yapılmış
+ Client verisine güvenilmiyor
 
- Düzenli access control testleri uygulanıyor
+ Tüm metodlar aynı şekilde kontrol ediliyor
+
+🎯 Kısaca Akılda Kalsın
